@@ -1,5 +1,11 @@
 # HW 1
 
+Для запуска deploy-скрипта выполните:
+
+```sh
+./deploy.sh
+```
+
 - Развернуть приложение как Pod для начального теста
 
 ```sh
@@ -34,3 +40,13 @@ kubectl port-forward log-app-test-pod 8080:8080`
 Так как по условию Deployment должен быть настроен с монтированием `emptyDir` для логов, `log-agent` был реализован с через sidecar container `log-sidecar` в `Deployment`, выводящий содержимое app.log в `stdout`, и контейнер `agent` в DaemonSet, читающий логи `log-sidecar`.
 
 ![kubectl logs](images/kubectl-logs.png)
+ 
+- Развернуть CronJob для архивирования логов
+
+CronJob собирает логи со всех реплик через HTTP-запрос, архивирует их и кладет архив в `/tmp`
+
+Пример работы CronJob
+
+![CronJob Results](images/cronjob-results.png)
+
+> zcat криво выводит содержимое. Распакованные файлы имеют правильное содержимое.

@@ -9,14 +9,16 @@ kubectl apply -f "$SCRIPT_DIR/k8s/test-pod.yaml"
 
 sed "s/\${CONFIG_CHECKSUM}/$CONFIG_PATCH/" "$SCRIPT_DIR/k8s/deployment.yaml" | kubectl apply -f -
 kubectl apply -f "$SCRIPT_DIR/k8s/service.yaml"
+kubectl apply -f "$SCRIPT_DIR/k8s/service-headless.yaml"
 
 kubectl apply -f "$SCRIPT_DIR/k8s/daemonset.yaml"
 kubectl apply -f "$SCRIPT_DIR/k8s/cronjob.yaml"
 
-echo "Waiting for deployment..."
-kubectl rollout status deployment/log-app-deployment --timeout=180s
+echo "Waiting for components to be ready"
 
-echo "Waiting for daemonset..."
+kubectl wait --for=condition=Ready pod/log-app-test-pod --timeout=60s
+
+kubectl rollout status deployment/log-app-deployment --timeout=180s
 kubectl rollout status daemonset/log-agent --timeout=180s || true
 
 echo "System is ready"

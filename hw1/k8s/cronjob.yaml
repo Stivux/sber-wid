@@ -10,16 +10,24 @@ spec:
         spec:
           restartPolicy: OnFailure
           containers:
-            - name: archiver
-              image: curlimages/curl:8.7.1
-              imagePullPolicy: IfNotPresent
-              command: ["/bin/sh", "-c"]
-              args:
-                - |
-                  TS=$(date +%Y%m%d-%H%M%S)
-                  mkdir -p /tmp/app-logs-$TS
-                  curl -s http://log-app-service/logs > /tmp/app-logs-$TS/app.log
-                  tar -czf /tmp/app-logs-$TS.tar.gz -C /tmp app-logs-$TS
-                  echo "Archive created: /tmp/app-logs-$TS.tar.gz"
-                  ls -lh /tmp/app-logs-$TS.tar.gz
-                  sleep 300
+          - name: archiver
+            image: curlimages/curl:8.7.1
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                TS=$(date +%Y%m%d-%H%M%S)
+                DIR="/tmp/app-logs-$TS"
+                mkdir -p $DIR
+                
+                IPS=$(nslookup log-app-discovery | grep "Address" | tail -n +2 | awk '{print $NF}')
+                
+                for IP in $IPS; do
+                    CLEAN_IP=$(echo $IP | cut -d'#' -f1)
+                    echo "Downloading logs from $CLEAN_IP..."
+                    curl -s "http://$CLEAN_IP:8080/logs" > "$DIR/replica-$CLEAN_IP.log"
+                  done
+                
+                tar -czf "/tmp/app-logs-$TS.tar.gz" -C /tmp "app-logs-$TS"
+                echo "Archive created with logs from all replicas"
+                ls -lh $DIR.tar.gz
+                sleep 300
