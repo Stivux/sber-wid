@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-app-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: log-app
+  template:
+    metadata:
+      labels:
+        app: log-app
+      annotations:
+        checksum/config: ${CONFIG_CHECKSUM}
+    spec:
+      containers:
+        - name: python-app
+          image: stivux/custom-log-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          envFrom:
+            - configMapRef:
+                name: app-config
+          volumeMounts:
+            - name: log-storage
+              mountPath: /app/logs
+        - name: log-sidecar
+          image: busybox:1.36
+          command: ["/bin/sh", "-c", "tail -F /app/logs/app.log"]
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          volumeMounts:
+          - name: log-storage
+            mountPath: /app/logs
+      volumes:
+        - name: log-storage
+          emptyDir: {}

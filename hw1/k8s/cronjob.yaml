@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: log-archiver
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: archiver
+              image: curlimages/curl:8.7.1
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  TS=$(date +%Y%m%d-%H%M%S)
+                  mkdir -p /tmp/app-logs-$TS
+                  curl -s http://log-app-service/logs > /tmp/app-logs-$TS/app.log
+                  tar -czf /tmp/app-logs-$TS.tar.gz -C /tmp app-logs-$TS
+                  echo "Archive created: /tmp/app-logs-$TS.tar.gz"
+                  ls -lh /tmp/app-logs-$TS.tar.gz
+                  sleep 300

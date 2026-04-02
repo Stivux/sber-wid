@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: log-app-test-pod
+  labels:
+    app: log-app-test
+spec:
+  containers:
+    - name: python-app
+      image: stivux/custom-log-app:latest
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 8080
+
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "100m"
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+
+      envFrom:
+        - configMapRef:
+            name: app-config
+
+      volumeMounts:
+        - name: log-storage
+          mountPath: /app/logs
+
+  volumes:
+    - name: log-storage
+      emptyDir: {}

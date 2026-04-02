@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  WELCOME_MSG: "Hello from Kubernetes ConfigMap!"
+  APP_PORT: "8080"
