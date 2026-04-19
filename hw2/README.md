@@ -1,4 +1,4 @@
-# HW 1
+# HW 2
 
 Для запуска deploy-скрипта выполните:
 
@@ -6,47 +6,33 @@
 ./deploy.sh
 ```
 
-- Развернуть приложение как Pod для начального теста
+В deploy.sh добавлены установка и настройка istio service mesh:
+
+```sh
+echo "Installing / upgrading Istio control plane..."
+istioctl install --set profile=demo -y
+
+kubectl label namespace default istio-injection=enabled --overwrite
+
+# ...
+kubectl apply -f "$SCRIPT_DIR/k8s/istio-gateway.yaml"
+kubectl apply -f "$SCRIPT_DIR/k8s/virtual-service.yaml"
+kubectl apply -f "$SCRIPT_DIR/k8s/destination-rule.yaml"
+```
+
+Предполается наличие `istioctl` в `PATH`
 
 ```sh
 # Проброс порта
-kubectl port-forward log-app-test-pod 8080:8080`
+kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80
 ```
 
-![Тестовый pod](images/test-pod.png)
+По выводу kubectl видно, что deployment имеет дополнительный контейнер - это istio-proxy.
 
-> Заголовок приветствия берется из ConfigMap (для наглядности, сделан отличным от заданного в приложении "Welcome to the custom app").
+![istio deploy](images/istio-deploy.png)
 
-- Развернуть приложение как Deployment. Создать Service для балансировки нагрузки
+Для POST запроса `/log` нужно было установить задержку в 2 секунды. На скриншоте подтверждение наличия задержки:
 
-Запустим deploy-скрипт
+![log delay](images/log-delay.png)
 
-```sh
-./deploy.sh
-```
-
-![Запуск deploy.sh](images/start-deploy.png)
-
-Проверка работы API и балансировки нагрузки:
-
-![Работа Service и Deployment](images/service-n-deployment1.png)
-
-![Работа Service и Deployment](images/service-n-deployment2.png)
-
-По выводу `/logs` можно видеть, что запросы направляются на различные pod-реплики.
-
-- Развернуть DaemonSet с log-agent
-
-Так как по условию Deployment должен быть настроен с монтированием `emptyDir` для логов, `log-agent` был реализован с через sidecar container `log-sidecar` в `Deployment`, выводящий содержимое app.log в `stdout`, и контейнер `agent` в DaemonSet, читающий логи `log-sidecar`.
-
-![kubectl logs](images/kubectl-logs.png)
- 
-- Развернуть CronJob для архивирования логов
-
-CronJob собирает логи со всех реплик через HTTP-запрос, архивирует их и кладет архив в `/tmp`
-
-Пример работы CronJob
-
-![CronJob Results](images/cronjob-results.png)
-
-> zcat криво выводит содержимое. Распакованные файлы имеют правильное содержимое.
+Логи `curl` показывают, что запросы идут через `istio-envoy`.
